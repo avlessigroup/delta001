@@ -6,7 +6,7 @@
   "orientation": "any",
   "scope": "/https://avlessigroup.github.io/delta001/",
   "short_name": "avlessigroup.github",
-  "start_url": "https://avlessigroup.github.io/delta001/",
+  "start_url": "/https://avlessigroup.github.io/delta001/",
   "theme_color": "#0d6efd",
   "icons": [
     {
@@ -21,8 +21,21 @@
       "is192x192": false
     }
   ],
-  "id": "baca",
-  "description": "none",
+  "id": "avlessi",
+  "description": "for baca",
   "lang": "fr",
-  "prefer_related_applications": true
+  "display_override": [
+    "standalone",
+    "window-controls-overlay"
+  ],
+  "related_applications": [
+    {
+      "platform": "play",
+      "url": "https://avlessigroup.github.io/delta001/",
+      "id": "deita001"
+    }
+  ],
+  "categories": [
+    "government"
+  ]
 }
