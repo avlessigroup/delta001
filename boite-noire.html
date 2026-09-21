@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>BACA-APP — Boîte Noire</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/style-baca.css">
+    <link rel="manifest" href="/manifest.json">
+</head>
+
+<body>
+    <div id="bacaLayout"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/3.0.1/jspdf.umd.min.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.4/jspdf.plugin.autotable.min.js"></script>
+
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script src="assets/js/config.js"></script>
+    <script src="assets/js/supabase-client.js"></script>
+    <script src="assets/js/session.js"></script>
+    <script src="assets/js/layout.js"></script>
+    <script src="assets/js/boite-noire.js"></script>
+
+    <script>
+        document.addEventListener(
+            "DOMContentLoaded",
+            async function () {
+                const profile = await window.BACA_SESSION.requireSession();
+
+                if (!profile) {
+                    return;
+                }
+
+                window.BACA_LAYOUT.render(profile);
+
+                document.querySelector("#pageContent").innerHTML = `
+                    <div class="baca-page-header">
+                        <div>
+                            <h1 class="baca-page-title">Boîte Noire</h1>
+                            <p class="baca-page-subtitle">
+                                Journal d'activité infalsifiable — traçabilité complète des actions.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div id="boiteNoireMessage"></div>
+
+                    <section class="baca-card mb-4">
+                        <div class="baca-card-body">
+                            <div class="row g-3">
+                                <div class="col-12 col-md-6 col-lg-3">
+                                    <label for="bn-date-start" class="form-label">
+                                        Du
+                                    </label>
+                                    <input
+                                        id="bn-date-start"
+                                        type="date"
+                                        class="form-control"
+                                    >
+                                </div>
+
+                                <div class="col-12 col-md-6 col-lg-3">
+                                    <label for="bn-date-end" class="form-label">
+                                        Au
+                                    </label>
+                                    <input
+                                        id="bn-date-end"
+                                        type="date"
+                                        class="form-control"
+                                    >
+                                </div>
+
+                                <div class="col-12 col-md-6 col-lg-3">
+                                    <label for="bn-module" class="form-label">
+                                        Module
+                                    </label>
+                                    <select id="bn-module" class="form-select">
+                                        <option value="">Tous</option>
+                                        <option value="inventaire">Inventaire</option>
+                                        <option value="mouvements">Mouvements</option>
+                                        <option value="utilisateurs">Utilisateurs</option>
+                                        <option value="categories">Catégories</option>
+                                        <option value="administration">Administration</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-12 col-md-6 col-lg-3">
+                                    <label for="bn-action" class="form-label">
+                                        Action
+                                    </label>
+                                    <select id="bn-action" class="form-select">
+                                        <option value="">Toutes</option>
+                                        <option value="CREATION">Création</option>
+                                        <option value="MODIFICATION">Modification</option>
+                                        <option value="SUPPRESSION">Suppression</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-12 col-md-6 col-lg-3">
+                                    <label for="bn-resultat" class="form-label">
+                                        Résultat
+                                    </label>
+                                    <select id="bn-resultat" class="form-select">
+                                        <option value="">Tous</option>
+                                        <option value="succes">Succès</option>
+                                        <option value="echec">Échec</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-12 col-md-6 col-lg-3">
+                                    <label for="bn-user" class="form-label">
+                                        Utilisateur
+                                    </label>
+                                    <input
+                                        id="bn-user"
+                                        type="text"
+                                        class="form-control"
+                                        placeholder="Nom, matricule..."
+                                    >
+                                </div>
+
+                                <div class="col-12">
+                                    <button
+                                        id="resetBnFilters"
+                                        class="btn btn-outline-secondary"
+                                        type="button"
+                                    >
+                                        Réinitialiser les filtres
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="baca-card">
+                        <div class="baca-card-header d-flex
+                            justify-content-between
+                            align-items-center
+                            gap-2
+                            flex-wrap"
+                        >
+                            <h2 class="h5 mb-0">Journal des activités</h2>
+                            <span
+                                id="bnResultCount"
+                                class="badge text-bg-secondary"
+                            >
+                                0 entrée
+
+                                </span>
+
+
+                                <div class="baca-card-header d-flex justify-content-between align-items-center gap-2 flex-wrap">
+  <h2 class="h5 mb-0">Journal des activités</h2>
+  <div class="d-flex gap-2">
+
+
+     
+
+
+  </div>
+</div>
+
+
+<!-- Modèle invisible pour l’export PDF de la Boîte Noire -->
+<div id="boiteNoirePdfTemplate" style="display:none;">
+  <div style="padding:20px;font-family:Arial,sans-serif;">
+    <h2 style="margin-bottom:5px;">RÉPUBLIQUE DU BÉNIN</h2>
+    <h3 style="margin-top:0;margin-bottom:20px;">FORCES ARMÉES BÉNINOISES — ARMÉE DE L’AIR<br>Base Aérienne de Cana (BACA)</h3>
+
+    <h1 style="text-align:center;margin-bottom:30px;">Journal d’activité (Boîte Noire)</h1>
+
+    <p style="margin-bottom:20px;">
+      <strong>Filtres :</strong> <span id="pdf-bn-filtres"></span><br>
+      <strong>Nombre d’entrées :</strong> <span id="pdf-bn-count"></span>
+    </p>
+
+    <table style="width:100%;border-collapse:collapse;font-size:10px;">
+      <thead>
+        <tr>
+          <th style="border:1px solid #000;padding:3px;">Date</th>
+          <th style="border:1px solid #000;padding:3px;">Utilisateur</th>
+          <th style="border:1px solid #000;padding:3px;">Rôle</th>
+          <th style="border:1px solid #000;padding:3px;">Module</th>
+          <th style="border:1px solid #000;padding:3px;">Action</th>
+          <th style="border:1px solid #000;padding:3px;">Cible</th>
+          <th style="border:1px solid #000;padding:3px;">Résultat</th>
+        </tr>
+      </thead>
+      <tbody id="pdf-bn-body"></tbody>
+    </table>
+
+    <div style="margin-top:30px;font-size:12px;color:#555;">
+      Document généré automatiquement par BACA-APP.
+    </div>
+  </div>
+</div>
+
+
+                        </div>
+
+                        <div class="baca-card-body">
+                            <div class="table-responsive">
+                                <table class="table align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Utilisateur</th>
+                                            <th>Rôle</th>
+                                            <th>Module</th>
+                                            <th>Action</th>
+                                            <th>Cible</th>
+                                            <th>Résultat</th>
+                                            <th>Détails</th>
+                                        </tr>
+                                    </thead>
+
+                                    <tbody id="boiteNoireTableBody">
+                                        <tr>
+                                            <td colspan="8" class="text-center text-muted">
+                                                Chargement...
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <nav
+                                class="mt-3"
+                                aria-label="Pagination boîte noire"
+                            >
+                                <ul
+                                    id="boiteNoirePagination"
+                                    class="pagination justify-content-center mb-0"
+                                ></ul>
+                            </nav>
+                        </div>
+                    </section>
+                `;
+
+                window.BACA_BOITE_NOIRE.initialize(profile);
+            }
+        );
+    </script>
+    <script src="assets/js/jsonbin-config.js"></script>
+    <script src="assets/js/jsonbin-client.js"></script>
+    <script src="assets/js/pwa.js"></script>
+    <script src="assets/js/offline-db.js"></script>
+</body>
+
+</html>

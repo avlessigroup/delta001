@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BACA-APP — Sauvegarde</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/style-baca.css">
+    <link rel="manifest" href="/manifest.json">
+</head>
+
+<body>
+    <div id="bacaLayout"></div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script src="assets/js/config.js"></script>
+    <script src="assets/js/supabase-client.js"></script>
+    <script src="assets/js/session.js"></script>
+    <script src="assets/js/layout.js"></script>
+    <script src="assets/js/jsonbin-config.js"></script>
+    <script src="assets/js/jsonbin-client.js"></script>
+    <script src="assets/js/sauvegarde.js"></script>
+
+    <script>
+        document.addEventListener(
+            "DOMContentLoaded",
+            async function () {
+                const profile = await window.BACA_SESSION.requireSession();
+                if (!profile) return;
+
+                window.BACA_LAYOUT.render(profile);
+
+                document.querySelector("#pageContent").innerHTML = `
+                    <div class="baca-page-header">
+                        <div>
+                            <h1 class="baca-page-title">Sauvegarde & intégrité</h1>
+                            <p class="baca-page-subtitle">
+                                Réplication de la Boîte Noire et sauvegarde de configuration.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div id="sauvegardeMessage"></div>
+
+                    <section class="baca-card mb-4">
+                        <div class="baca-card-body">
+                            <h2 class="h5 mb-3">Réplication Boîte Noire</h2>
+                            <p>
+                                Dernière synchronisation : <strong id="lastSyncLabel">–</strong><br>
+                                Dernier ID synchronisé : <strong id="lastIdLabel">–</strong>
+                            </p>
+                            <button id="syncBoiteNoireButton" class="btn btn-primary">
+                                Synchroniser maintenant
+                            </button>
+                        </div>
+                    </section>
+
+                    <section class="baca-card">
+                        <div class="baca-card-body">
+                            <h2 class="h5 mb-3">Configuration applicative</h2>
+                            <p>
+                                La configuration est stockée dans JSONBin (paramètres non sensibles).
+                            </p>
+                            <button id="loadConfigButton" class="btn btn-outline-secondary">
+                                Charger la configuration
+                            </button>
+                            <button id="saveConfigButton" class="btn btn-outline-primary">
+                                Sauvegarder la configuration courante
+                            </button>
+                            <pre id="configPreview" class="mt-3 bg-light p-2 rounded small" style="max-height:300px;overflow:auto;"></pre>
+                        </div>
+                    </section>
+                `;
+
+                window.BACA_SAUVEGARDE.initialize(profile);
+            }
+        );
+    </script>
+    <script src="assets/js/pwa.js"></script>
+    <script src="assets/js/offline-db.js"></script>
+</body>
+
+</html>

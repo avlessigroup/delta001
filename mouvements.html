@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>BACA-APP — Mouvements</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <link rel="stylesheet" href="assets/css/style-baca.css">
+    <link rel="manifest" href="/manifest.json">
+</head>
+<!-- html2pdf.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+<body>
+
+    <div id="bacaLayout"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/3.0.1/jspdf.umd.min.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.4/jspdf.plugin.autotable.min.js"></script>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script src="assets/js/config.js"></script>
+    <script src="assets/js/supabase-client.js"></script>
+    <script src="assets/js/session.js"></script>
+    <script src="assets/js/layout.js"></script>
+    <script src="assets/js/mouvements.js"></script>
+
+    <script>
+        document.addEventListener(
+            "DOMContentLoaded",
+            async function () {
+                const profile =
+                    await window.BACA_SESSION.requireSession();
+
+                if (!profile) {
+                    return;
+                }
+
+                window.BACA_LAYOUT.render(profile);
+
+                document.querySelector("#pageContent").innerHTML = `
+                    <div class="baca-page-header">
+                        <div>
+                            <h1 class="baca-page-title">
+                                Mouvements
+                            </h1>
+
+                            <p class="baca-page-subtitle">
+                                Journal des entrées, sorties et retours de matériel.
+                            </p>
+                        </div>
+
+                        <button
+                            id="newMovementButton"
+                            class="btn btn-primary"
+                            type="button"
+                        >
+                            Nouveau mouvement
+                        </button>
+                    </div>
+
+                    <div id="movementMessage"></div>
+
+                    <section class="baca-card mb-4">
+                        <div class="baca-card-body">
+                            <div class="row g-3">
+                                <div class="col-12 col-md-4">
+                                    <label
+                                        for="movementSearch"
+                                        class="form-label"
+                                    >
+                                        Rechercher
+                                    </label>
+
+                                    <input
+                                        id="movementSearch"
+                                        type="search"
+                                        class="form-control"
+                                        placeholder="Article, responsable, motif..."
+                                    >
+                                </div>
+
+                                <div class="col-12 col-md-3">
+                                    <label
+                                        for="movementTypeFilter"
+                                        class="form-label"
+                                    >
+                                        Type
+                                    </label>
+
+                                    <select
+                                        id="movementTypeFilter"
+                                        class="form-select"
+                                    >
+                                        <option value="">
+                                            Tous
+                                        </option>
+
+                                        <option value="entree">
+                                            Entrées
+                                        </option>
+
+                                        <option value="sortie">
+                                            Sorties
+                                        </option>
+
+                                        <option value="retour">
+                                            Retours
+                                        </option>
+                                    </select>
+                                </div>
+
+                                <div class="col-12 col-md-3">
+                                    <label
+                                        for="movementDateFilter"
+                                        class="form-label"
+                                    >
+                                        Période
+                                    </label>
+
+                                    <select
+                                        id="movementDateFilter"
+                                        class="form-select"
+                                    >
+                                        <option value="all">
+                                            Toute période
+                                        </option>
+
+                                        <option value="today">
+                                            Aujourd’hui
+                                        </option>
+
+                                        <option value="week">
+                                            Sept derniers jours
+                                        </option>
+
+                                        <option value="month">
+                                            Trente derniers jours
+                                        </option>
+                                    </select>
+                                </div>
+
+                                <div class="col-12 col-md-2 d-flex align-items-end">
+                                    <button
+                                        id="resetMovementFilters"
+                                        class="btn btn-outline-secondary w-100"
+                                        type="button"
+                                    >
+                                        Réinitialiser
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="baca-card">
+                        <div class="baca-card-header d-flex
+                            justify-content-between
+                            align-items-center
+                            gap-2
+                            flex-wrap"
+                        >
+                            <h2 class="h5 mb-0">
+                                Historique des mouvements
+                            </h2>
+
+
+                            <div class="baca-card-header d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                            <h2 class="h5 mb-0">Historique des mouvements</h2>
+                             <div class="d-flex gap-2">
+
+                          <button
+        id="exportMovementsPdf"
+        class="btn btn-outline-danger"
+        type="button">
+        Exporter en PDF
+    </button>
+
+
+
+
+                          </div>
+
+                            </div>   
+
+
+<!-- Modèle invisible pour l’export PDF des mouvements -->
+<div id="mouvementsPdfTemplate" style="display:none;">
+  <div style="padding:20px;font-family:Arial,sans-serif;">
+    <h2 style="margin-bottom:5px;">RÉPUBLIQUE DU BÉNIN</h2>
+    <h3 style="margin-top:0;margin-bottom:20px;">FORCES ARMÉES BÉNINOISES — ARMÉE DE L’AIR<br>Base Aérienne de Cana (BACA)</h3>
+
+    <h1 style="text-align:center;margin-bottom:30px;">Rapport de mouvements</h1>
+
+    <p style="margin-bottom:20px;">
+      <strong>Période :</strong> <span id="pdf-mvt-periode"></span><br>
+      <strong>Nombre de mouvements :</strong> <span id="pdf-mvt-count"></span>
+    </p>
+
+    <table style="width:100%;border-collapse:collapse;font-size:11px;">
+      <thead>
+        <tr>
+          <th style="border:1px solid #000;padding:4px;">Date</th>
+          <th style="border:1px solid #000;padding:4px;">Type</th>
+          <th style="border:1px solid #000;padding:4px;">Article</th>
+          <th style="border:1px solid #000;padding:4px;">Qté / S/N</th>
+          <th style="border:1px solid #000;padding:4px;">Responsable</th>
+          <th style="border:1px solid #000;padding:4px;">Motif</th>
+        </tr>
+      </thead>
+      <tbody id="pdf-mvt-body"></tbody>
+    </table>
+
+    <div style="margin-top:30px;font-size:12px;color:#555;">
+      Document généré automatiquement par BACA-APP.
+    </div>
+  </div>
+</div>
+
+
+
+                            <span
+                                id="movementResultCount"
+                                class="badge text-bg-secondary"
+                            >
+                                0 mouvement
+                            </span>
+                        </div>
+
+                        <div class="baca-card-body">
+                            <div class="table-responsive">
+                                <table class="table align-middle">
+                                    <thead>
+    <tr>
+        <th>Date</th>
+        <th>Type</th>
+        <th>Article</th>
+        <th>Désignation</th>
+        <th>Quantité</th>
+        <th>N° série</th>
+        <th>Responsable</th>
+        <th>Motif</th>
+        <th>Destination / provenance</th>
+    </tr>
+</thead>
+
+                                    <tbody id="movementsTableBody">
+                                        <tr>
+                                            <td
+                                                colspan="8"
+                                                class="text-center text-muted"
+                                            >
+                                                Chargement...
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </section>
+
+                  <!-- Modal création d'un mouvement -->
+<div
+    class="modal fade"
+    id="movementModal"
+    tabindex="-1"
+    aria-labelledby="movementModalTitle"
+    aria-hidden="true"
+>
+    <div
+        class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg"
+    >
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h2
+                    class="modal-title fs-5"
+                    id="movementModalTitle"
+                >
+                    Nouveau mouvement
+                </h2>
+
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Fermer"
+                ></button>
+            </div>
+
+            <form id="movementForm">
+
+                <div class="modal-body">
+                    <div class="row g-3">
+
+                        <div class="col-12 col-md-6">
+                            <label
+                                for="movementType"
+                                class="form-label"
+                            >
+                                Type de mouvement
+                            </label>
+
+                            <select
+                                id="movementType"
+                                class="form-select"
+                                required
+                            >
+                                <option value="">
+                                    Sélectionner
+                                </option>
+
+                                <option value="entree">
+                                    Entrée
+                                </option>
+
+                                <option value="sortie">
+                                    Sortie
+                                </option>
+
+                                <option value="retour">
+                                    Retour
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label
+                                for="movementArticle"
+                                class="form-label"
+                            >
+                                Article
+                            </label>
+
+                            <select
+                                id="movementArticle"
+                                class="form-select"
+                                required
+                            >
+                                <option value="">
+                                    Sélectionner un article
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="col-12">
+                            <label
+                                for="movementArticleInfo"
+                                class="form-label"
+                            >
+                                Informations article
+                            </label>
+
+                            <input
+                                id="movementArticleInfo"
+                                class="form-control"
+                                type="text"
+                                readonly
+                                placeholder="La désignation apparaîtra ici"
+                            >
+                        </div>
+
+                        <div class="col-12">
+                            <div class="row g-3">
+
+                                <div class="col-12 col-md-6">
+                                    <label
+                                        for="movementQuantity"
+                                        class="form-label"
+                                    >
+                                        Quantité
+                                        <span class="text-muted">
+                                            (facultatif)
+                                        </span>
+                                    </label>
+
+                                    <input
+                                        type="number"
+                                        id="movementQuantity"
+                                        name="quantite"
+                                        class="form-control"
+                                        min="0"
+                                        step="0.001"
+                                        inputmode="decimal"
+                                        placeholder="Ex. 5"
+                                    >
+
+                                    <div class="form-text">
+                                        Laissez vide si la quantité
+                                        n’est pas connue.
+                                    </div>
+                                </div>
+
+                                <div class="col-12 col-md-6">
+                                    <label
+                                        for="movementSerialNumber"
+                                        class="form-label"
+                                    >
+                                        Numéro de série
+                                        <span class="text-muted">
+                                            (facultatif)
+                                        </span>
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        id="movementSerialNumber"
+                                        name="numero_serie"
+                                        class="form-control"
+                                        maxlength="100"
+                                        placeholder="Ex. SN-2026-001"
+                                    >
+
+                                    <div class="form-text">
+                                        À renseigner uniquement si
+                                        l’article est sérialisé.
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+                            <div
+                                class="alert alert-light border mb-0"
+                                role="note"
+                            >
+                                Vous pouvez renseigner la quantité,
+                                le numéro de série, ou les deux selon
+                                les informations disponibles.
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label
+                                for="movementDestination"
+                                class="form-label"
+                            >
+                                Destination / provenance
+                            </label>
+
+                            <input
+                                id="movementDestination"
+                                type="text"
+                                class="form-control"
+                            >
+                        </div>
+
+                        <div class="col-12">
+                            <label
+                                for="movementReason"
+                                class="form-label"
+                            >
+                                Motif / mission
+                            </label>
+
+                            <input
+                                id="movementReason"
+                                type="text"
+                                class="form-control"
+                                required
+                            >
+                        </div>
+
+                        <div class="col-12">
+                            <label
+                                for="movementObservations"
+                                class="form-label"
+                            >
+                                Observations
+                            </label>
+
+                            <textarea
+                                id="movementObservations"
+                                class="form-control"
+                                rows="3"
+                            ></textarea>
+                        </div>
+
+                        <div class="col-12">
+                            <div
+                                id="movementMessage"
+                                role="alert"
+                                aria-live="polite"
+                            ></div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button
+                        type="button"
+                        class="btn btn-secondary"
+                        data-bs-dismiss="modal"
+                    >
+                        Annuler
+                    </button>
+
+                    <button
+                        type="submit"
+                        id="saveMovementButton"
+                        class="btn btn-primary"
+                    >
+                        Enregistrer
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+
+                                    <div class="modal-footer">
+                                     
+                                        
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                window.BACA_MOVEMENTS.initialize(profile);
+            }
+        );
+
+        document.getElementById('exportMouvementsPdfButton')?.addEventListener('click', () => {
+            // Tu peux récupérer les filtres depuis l’interface si tu en as
+            const filters = {
+                dateStart: document.getElementById('mvt-date-start')?.value || '',
+                dateEnd: document.getElementById('mvt-date-end')?.value || ''
+            };
+            window.BACA_MOUVEMENTS_PDF.exportMouvementsPdf(filters);
+        });
+    </script>
+    <!-- SDK EmailJS (v3) -->
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+
+    <script src="assets/js/pwa.js"></script>
+    <script src="assets/js/offline-db.js"></script>
+
+</body>
+
+</html>

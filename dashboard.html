@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>BACA-APP — Tableau de bord</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <link rel="stylesheet" href="assets/css/style-baca.css">
+    <link rel="manifest" href="/manifest.json">
+</head>
+
+<body>
+
+
+    <div id="bacaLayout"></div>
+    <script src="assets/js/session.js"></script>
+
+    <script src="assets/js/config.js"></script>
+    <script src="assets/js/layout.js"></script>
+
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script src="assets/js/config.js"></script>
+    <script src="assets/js/supabase-client.js"></script>
+    <script src="assets/js/layout.js"></script>
+    <script src="assets/js/dashboard.js"></script>
+
+    <script>
+        document.addEventListener(
+            "DOMContentLoaded",
+            async function () {
+                const profile =
+                    await window.BACA_SESSION.requireSession();
+
+                if (!profile) {
+                    return;
+                }
+
+                window.BACA_LAYOUT.render(profile);
+
+                const pageContent =
+                    document.querySelector("#pageContent");
+
+                pageContent.innerHTML = `
+            <div class="baca-page-header">
+                <div>
+                    <h1 class="baca-page-title">
+                        Tableau de bord
+                    </h1>
+
+                    <p class="baca-page-subtitle">
+                        Vue générale du matériel et des mouvements logistiques.
+                    </p>
+                </div>
+
+                <button
+                    id="refreshDashboard"
+                    class="btn btn-primary"
+                    type="button"
+                >
+                    Actualiser
+                </button>
+            </div>
+
+            <div id="dashboardMessage"></div>
+<div id="dashboardAlertSummary"></div>
+            <div class="row g-3 mb-4">
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="baca-card baca-stat-card">
+                        <div class="baca-card-body">
+                            <p class="baca-stat-label">
+                                Articles référencés
+                            </p>
+
+                            <div id="totalArticles"
+                                 class="baca-stat-value">
+                                -
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="baca-card baca-stat-card success">
+                        <div class="baca-card-body">
+                            <p class="baca-stat-label">
+                                Disponibles
+                            </p>
+
+                            <div id="availableArticles"
+                                 class="baca-stat-value">
+                                -
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="baca-card baca-stat-card warning">
+                        <div class="baca-card-body">
+                            <p class="baca-stat-label">
+                                En maintenance
+                            </p>
+
+                            <div id="maintenanceArticles"
+                                 class="baca-stat-value">
+                                -
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="baca-card baca-stat-card danger">
+                        <div class="baca-card-body">
+                            <p class="baca-stat-label">
+                                Sous seuil
+                            </p>
+
+                            <div id="belowThreshold"
+                                 class="baca-stat-value">
+                                -
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="baca-card">
+                        <div class="baca-card-body">
+                            <p class="baca-stat-label">
+                                En mission
+                            </p>
+
+                            <div id="missionArticles"
+                                 class="baca-stat-value">
+                                -
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="baca-card">
+                        <div class="baca-card-body">
+                            <p class="baca-stat-label">
+                                Hors service / réformés
+                            </p>
+
+                            <div id="reformedArticles"
+                                 class="baca-stat-value">
+                                -
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="baca-card">
+                        <div class="baca-card-body">
+                            <p class="baca-stat-label">
+                                Mouvements enregistrés
+                            </p>
+
+                            <div id="totalMovements"
+                                 class="baca-stat-value">
+                                -
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <section class="baca-card">
+                <div class="baca-card-header">
+                    <h2 class="h5 mb-0">
+                        Derniers mouvements
+                    </h2>
+                </div>
+
+                <div class="baca-card-body">
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                    <th>Article</th>
+                                    <th>Désignation</th>
+                                    <th>Responsable</th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="recentMovementsBody">
+                                <tr>
+                                    <td colspan="5"
+                                        class="text-center text-muted">
+                                        Chargement...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        `;
+
+                window.BACA_DASHBOARD.initialize();
+            }
+        );
+
+
+
+
+
+    </script>
+    <script src="assets/js/pwa.js"></script>
+    <script src="assets/js/offline-db.js"></script>
+</body>
+
+</html>

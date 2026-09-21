@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>BACA-APP — Inventaire</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <link rel="stylesheet" href="assets/css/style-baca.css">
+    <link rel="manifest" href="./manifest.json">
+
+</head>
+<!-- html2pdf.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+<body>
+
+    <div id="bacaLayout"></div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script src="assets/js/config.js"></script>
+    <script src="assets/js/supabase-client.js"></script>
+    <script src="assets/js/session.js"></script>
+    <script src="assets/js/layout.js"></script>
+    <script src="assets/js/inventaire.js"></script>
+
+    <script>
+        document.addEventListener(
+            "DOMContentLoaded",
+            async function () {
+                const profile =
+                    await window.BACA_SESSION.requireSession();
+
+                if (!profile) {
+                    return;
+                }
+
+                window.BACA_LAYOUT.render(profile);
+
+                document.querySelector("#pageContent").innerHTML = `
+                    <div class="baca-page-header">
+                        <div>
+                            <h1 class="baca-page-title">
+                                Inventaire
+                            </h1>
+
+                            <p class="baca-page-subtitle">
+                                Consultation et recherche du matériel enregistré.
+                            </p>
+                        </div>
+
+                        <button
+                            id="newInventoryButton"
+                            class="btn btn-primary"
+                            type="button"
+                        >
+                            Nouvel article
+                        </button>
+                    </div>
+                    <div id="inventoryAlertSummary"></div>
+                    <div id="inventoryMessage"></div>
+
+                    <section class="baca-card mb-4">
+                        <div class="baca-card-body">
+                            <div class="row g-3">
+
+                                <div class="col-12 col-lg-4">
+                                    <label
+                                        for="inventorySearch"
+                                        class="form-label"
+                                    >
+                                        Recherche
+                                    </label>
+
+                                    <input
+                                        id="inventorySearch"
+                                        type="search"
+                                        class="form-control"
+                                        placeholder="ID, désignation, série, emplacement..."
+                                    >
+                                </div>
+
+                                <div class="col-12 col-md-6 col-lg-2">
+                                    <label
+                                        for="inventoryCategory"
+                                        class="form-label"
+                                    >
+                                        Catégorie
+                                    </label>
+
+                                    <select
+                                        id="inventoryCategory"
+                                        class="form-select"
+                                    >
+                                        <option value="">
+                                            Toutes
+                                        </option>
+                                    </select>
+                                </div>
+
+                                <div class="col-12 col-md-6 col-lg-2">
+                                    <label
+                                        for="inventoryStatus"
+                                        class="form-label"
+                                    >
+                                        Statut
+                                    </label>
+
+                                    <select
+                                        id="inventoryStatus"
+                                        class="form-select"
+                                    >
+                                        <option value="">
+                                            Tous
+                                        </option>
+
+                                        <option value="disponible">
+                                            Disponible
+                                        </option>
+
+                                        <option value="en_mission">
+                                            En mission
+                                        </option>
+
+                                        <option value="en_maintenance">
+                                            En maintenance
+                                        </option>
+
+                                        <option value="hors_service_reforme">
+                                            Hors service / réformé
+                                        </option>
+                                    </select>
+                                </div>
+
+                                <div class="col-12 col-md-6 col-lg-2">
+                                    <label
+                                        for="inventoryLocation"
+                                        class="form-label"
+                                    >
+                                        Emplacement
+                                    </label>
+
+                                    <input
+                                        id="inventoryLocation"
+                                        type="search"
+                                        class="form-control"
+                                        placeholder="Hangar..."
+                                    >
+                                </div>
+
+                                <div class="col-12 col-md-6 col-lg-2">
+                                    <label
+                                        for="inventoryAlert"
+                                        class="form-label"
+                                    >
+                                        Seuil
+                                    </label>
+
+                                    <select
+                                        id="inventoryAlert"
+                                        class="form-select"
+                                    >
+                                        <option value="">
+                                            Tous
+                                        </option>
+
+                                        <option value="critical">
+                                            Sous seuil
+                                        </option>
+
+                                        <option value="normal">
+                                            Niveau normal
+                                        </option>
+                                    </select>
+                                </div>
+
+                                <div class="col-12">
+                                    <button
+                                        id="resetInventoryFilters"
+                                        class="btn btn-outline-secondary"
+                                        type="button"
+                                    >
+                                        Réinitialiser les filtres
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="baca-card">
+                        <div class="baca-card-header d-flex
+                            justify-content-between
+                            align-items-center
+                            gap-2
+                            flex-wrap"
+                        >
+                            <h2 class="h5 mb-0">
+                                Articles enregistrés
+                            </h2>
+
+                            <span
+                                id="inventoryResultCount"
+                                class="badge text-bg-secondary"
+                            >
+                                0 résultat
+                            </span>
+                        </div>
+
+                        <div class="baca-card-body">
+                            <div class="table-responsive">
+                                <table class="table align-middle">
+                                    <thead>
+                                        <tr>
+                                             <th>Photo</th>
+                                            <th>ID article</th>
+                                            <th>Catégorie</th>
+                                            <th>Désignation</th>
+                                            <th>N° série</th>
+                                            <th>Quantité</th>
+                                            <th>Statut</th>
+                                            <th>Emplacement</th>
+                                            <th>Seuil</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+
+                                    <tbody id="inventoryTableBody">
+                                        <tr>
+                                            <td
+                                                colspan="9"
+                                                class="text-center text-muted"
+                                            >
+                                                Chargement...
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <nav
+                                class="mt-3"
+                                aria-label="Pagination inventaire"
+                            >
+                                <ul
+                                    id="inventoryPagination"
+                                    class="pagination justify-content-center mb-0"
+                                ></ul>
+                            </nav>
+                        </div>
+                    </section>
+                `;
+
+                window.BACA_INVENTORY.initialize(profile);
+            }
+        );
+    </script>
+    <script src="assets/js/pwa.js"></script>
+    <script src="assets/js/offline-db.js"></script>
+
+
+    <!-- Modale pour afficher la photo en grand -->
+    <div class="modal fade" id="photoModal" tabindex="-1" aria-labelledby="photoModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="photoModalLabel">
+                        Photo de l’article
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body text-center p-3">
+                    <img id="photoModalImage" src="" alt="Photo en grand" class="img-fluid">
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

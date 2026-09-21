@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>BACA-APP — Fiche inventaire</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <link rel="stylesheet" href="assets/css/style-baca.css">
+    <link rel="manifest" href="/manifest.json">
+</head>
+
+<body>
+
+    <div id="bacaLayout"></div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- Tes modules -->
+    <script src="assets/js/config.js"></script>
+    <script src="assets/js/supabase-client.js"></script>
+    <script src="assets/js/session.js"></script>
+    <script src="assets/js/layout.js"></script>
+    <script src="assets/js/inventaire-form.js"></script>
+
+    <script>
+        document.addEventListener(
+            "DOMContentLoaded",
+            async function () {
+                const profile =
+                    await window.BACA_SESSION.requireSession();
+
+                if (!profile) {
+                    return;
+                }
+
+                window.BACA_LAYOUT.render(profile);
+
+                document.querySelector("#pageContent").innerHTML = `
+                    <div class="baca-page-header">
+
+<div class="d-flex gap-2 mt-4">
+  <button id="saveInventoryButton" type="submit" class="btn btn-primary">Enregistrer</button>
+  <a href="inventaire.html" class="btn btn-secondary">Annuler</a>
+  <button id="exportInventoryPdfButton" type="button" class="btn btn-outline-success">
+    Exporter en PDF
+  </button>
+</div>
+
+<!-- Modèle invisible pour l’export PDF -->
+<div id="inventoryPdfTemplate" style="display:none;">
+  <div style="padding:20px;font-family:Arial,sans-serif;">
+    <h2 style="margin-bottom:5px;">RÉPUBLIQUE DU BÉNIN</h2>
+    <h3 style="margin-top:0;margin-bottom:20px;">FORCES ARMÉES BÉNINOISES — ARMÉE DE L’AIR<br>Base Aérienne de Cana (BACA)</h3>
+
+    <h1 style="text-align:center;margin-bottom:30px;">Fiche inventaire</h1>
+
+    <table style="width:100%;border-collapse:collapse;">
+      <tr>
+        <td style="padding:6px;border:1px solid #000;"><strong>ID article</strong></td>
+        <td style="padding:6px;border:1px solid #000;" id="pdf-id-article"></td>
+      </tr>
+      <tr>
+        <td style="padding:6px;border:1px solid #000;"><strong>Catégorie</strong></td>
+        <td style="padding:6px;border:1px solid #000;" id="pdf-categorie"></td>
+      </tr>
+      <tr>
+        <td style="padding:6px;border:1px solid #000;"><strong>Sous-catégorie</strong></td>
+        <td style="padding:6px;border:1px solid #000;" id="pdf-sous-categorie"></td>
+      </tr>
+      <tr>
+        <td style="padding:6px;border:1px solid #000;"><strong>Désignation / modèle</strong></td>
+        <td style="padding:6px;border:1px solid #000;" id="pdf-designation"></td>
+      </tr>
+      <tr>
+        <td style="padding:6px;border:1px solid #000;"><strong>Numéro de série</strong></td>
+        <td style="padding:6px;border:1px solid #000;" id="pdf-serial"></td>
+      </tr>
+      <tr>
+        <td style="padding:6px;border:1px solid #000;"><strong>Quantité</strong></td>
+        <td style="padding:6px;border:1px solid #000;" id="pdf-quantity"></td>
+      </tr>
+      <tr>
+        <td style="padding:6px;border:1px solid #000;"><strong>Unité</strong></td>
+        <td style="padding:6px;border:1px solid #000;" id="pdf-unit"></td>
+      </tr>
+      <tr>
+        <td style="padding:6px;border:1px solid #000;"><strong>Statut</strong></td>
+        <td style="padding:6px;border:1px solid #000;" id="pdf-status"></td>
+      </tr>
+      <tr>
+        <td style="padding:6px;border:1px solid #000;"><strong>Emplacement</strong></td>
+        <td style="padding:6px;border:1px solid #000;" id="pdf-location"></td>
+      </tr>
+      <tr>
+        <td style="padding:6px;border:1px solid #000;"><strong>Seuil d’alerte</strong></td>
+        <td style="padding:6px;border:1px solid #000;" id="pdf-threshold"></td>
+      </tr>
+      <tr>
+        <td style="padding:6px;border:1px solid #000;"><strong>Observations</strong></td>
+        <td style="padding:6px;border:1px solid #000;" id="pdf-observations"></td>
+      </tr>
+    </table>
+
+    <div style="margin-top:30px;font-size:12px;color:#555;">
+      Document généré automatiquement par BACA-APP.
+    </div>
+  </div>
+</div>
+
+
+                        <div>
+                            <h1
+                                id="inventoryFormTitle"
+                                class="baca-page-title"
+                            >
+                                Nouvel article
+                            </h1>
+
+                            <p class="baca-page-subtitle">
+                                Création ou modification d’une fiche inventaire.
+                            </p>
+                        </div>
+
+                        <a
+                            href="inventaire.html"
+                            class="btn btn-outline-secondary"
+                        >
+                            Retour à l’inventaire
+                        </a>
+                    </div>
+
+                    <div id="inventoryFormMessage"></div>
+
+                    <section class="baca-card">
+                        <div class="baca-card-body">
+                            <form id="inventoryForm">
+
+                                <input
+                                    type="hidden"
+                                    id="inventoryId"
+                                >
+
+                                <div class="row g-3">
+
+                                    <div class="col-12 col-md-6">
+                                        <label
+                                            for="articleId"
+                                            class="form-label"
+                                        >
+                                            ID article
+                                        </label>
+
+                                        <input
+                                            type="text"
+                                            id="articleId"
+                                            class="form-control"
+                                            placeholder="DRN-0001"
+                                            required
+                                        >
+
+                                        <small class="text-muted">
+                                            Identifiant unique de l’article.
+                                        </small>
+                                    </div>
+
+                                    <div class="col-12 col-md-6">
+    <label
+        for="categoryId"
+        class="form-label"
+    >
+        Catégorie
+    </label>
+
+    <select
+        id="categoryId"
+        class="form-select"
+        required
+    >
+        <option value="">
+            Sélectionner une catégorie
+        </option>
+    </select>
+</div>
+
+<div class="col-12 col-md-6">
+    <label
+        for="subcategoryId"
+        class="form-label"
+    >
+        Sous-catégorie
+    </label>
+
+    <select
+        id="subcategoryId"
+        class="form-select"
+        required
+        disabled
+    >
+        <option value="">
+            Sélectionnez d’abord une catégorie
+        </option>
+    </select>
+</div>
+
+                                    <div class="col-12 col-md-6">
+                                        <label
+                                            for="designation"
+                                            class="form-label"
+                                        >
+                                            Désignation / modèle
+                                        </label>
+
+                                        <input
+                                            type="text"
+                                            id="designation"
+                                            class="form-control"
+                                            required
+                                        >
+                                    </div>
+
+                                    <div class="col-12 col-md-6">
+                                        <label
+                                            for="serialNumber"
+                                            class="form-label"
+                                        >
+                                            Numéro de série
+                                        </label>
+
+                                        <input
+                                            type="text"
+                                            id="serialNumber"
+                                            class="form-control"
+                                        >
+
+                                        <small
+                                            id="serialHelp"
+                                            class="text-muted"
+                                        >
+                                            Obligatoire pour un article suivi individuellement.
+                                        </small>
+                                    </div>
+
+                                    <div class="col-12 col-md-4">
+                                        <label
+                                            for="quantity"
+                                            class="form-label"
+                                        >
+                                            Quantité
+                                        </label>
+
+                                        <input
+                                            type="number"
+                                            id="quantity"
+                                            class="form-control"
+                                            min="0"
+                                            step="0.001"
+                                            value="1"
+                                            required
+                                        >
+                                    </div>
+
+                                    <div class="col-12 col-md-4">
+                                        <label
+                                            for="unit"
+                                            class="form-label"
+                                        >
+                                            Unité
+                                        </label>
+
+                                        <input
+                                            type="text"
+                                            id="unit"
+                                            class="form-control"
+                                            placeholder="pièce, litre..."
+                                        >
+                                    </div>
+
+                                    <div class="col-12 col-md-4">
+                                        <label
+                                            for="threshold"
+                                            class="form-label"
+                                        >
+                                            Seuil d’alerte
+                                        </label>
+
+                                        <input
+                                            type="number"
+                                            id="threshold"
+                                            class="form-control"
+                                            min="0"
+                                            step="0.001"
+                                            value="1"
+                                            required
+                                        >
+
+                                        <small
+    id="quantityHelp"
+    class="text-muted"
+>
+    La quantité sera définie selon la sous-catégorie.
+</small>
+                                    </div>
+
+                                    <div class="col-12 col-md-6">
+                                        <label
+                                            for="status"
+                                            class="form-label"
+                                        >
+                                            Statut
+                                        </label>
+
+                                        <select
+                                            id="status"
+                                            class="form-select"
+                                            required
+                                        >
+                                            <option value="disponible">
+                                                Disponible
+                                            </option>
+
+                                            <option value="en_mission">
+                                                En mission
+                                            </option>
+
+                                            <option value="en_maintenance">
+                                                En maintenance
+                                            </option>
+
+                                            <option value="hors_service_reforme">
+                                                Hors service / réformé
+                                            </option>
+                                        </select>
+                                    </div>
+
+                                    <div class="col-12 col-md-6">
+                                        <label
+                                            for="location"
+                                            class="form-label"
+                                        >
+                                            Emplacement
+                                        </label>
+
+                                        <input
+                                            type="text"
+                                            id="location"
+                                            class="form-control"
+                                            placeholder="Hangar, atelier, dépôt..."
+                                            required
+                                        >
+                                    </div>
+
+                                    <div class="col-12">
+                                        <label
+                                            for="photo"
+                                            class="form-label"
+                                        >
+                                            Photo du matériel
+                                        </label>
+
+                                        <input
+                                            type="file"
+                                            id="photo"
+                                            class="form-control"
+                                            accept="image/jpeg,image/png,image/webp"
+                                        >
+
+                                        <small class="text-muted">
+                                            Formats acceptés : JPG, PNG, WEBP.
+                                            Taille maximale recommandée : 5 Mo.
+                                        </small>
+                                    </div>
+
+                                    <div class="col-12">
+                                        <div id="photoPreview"></div>
+                                    </div>
+
+                                    <div class="col-12">
+                                        <label
+                                            for="observations"
+                                            class="form-label"
+                                        >
+                                            Observations
+                                        </label>
+
+                                        <textarea
+                                            id="observations"
+                                            class="form-control"
+                                            rows="4"
+                                        ></textarea>
+                                    </div>
+
+                                </div>
+
+                                <div class="d-flex gap-2 mt-4">
+                                    <button
+                                        type="submit"
+                                        id="saveInventoryButton"
+                                        class="btn btn-primary"
+                                    >
+                                        Enregistrer
+                                    </button>
+
+                                    <a
+                                        href="inventaire.html"
+                                        class="btn btn-secondary"
+                                    >
+                                        Annuler
+                                    </a>
+                                </div>
+
+                            </form>
+                        </div>
+                    </section>
+                `;
+
+                window.BACA_INVENTORY_FORM.initialize(profile);
+            }
+        );
+    </script>
+    <!-- SDK EmailJS (v3) -->
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+
+    <script src="assets/js/pwa.js"></script>
+    <script src="assets/js/offline-db.js"></script>
+</body>
+
+</html>

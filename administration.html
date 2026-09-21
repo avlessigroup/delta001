@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>BACA-APP — Administration</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/style-baca.css">
+    <link rel="manifest" href="/manifest.json">
+</head>
+
+<body>
+    <div id="bacaLayout"></div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script src="assets/js/config.js"></script>
+    <script src="assets/js/supabase-client.js"></script>
+    <script src="assets/js/session.js"></script>
+    <script src="assets/js/layout.js"></script>
+    <script src="assets/js/administration.js"></script>
+
+    <script>
+        document.addEventListener(
+            "DOMContentLoaded",
+            async function () {
+                const profile = await window.BACA_SESSION.requireSession();
+
+                if (!profile) {
+                    return;
+                }
+
+                window.BACA_LAYOUT.render(profile);
+
+                document.querySelector("#pageContent").innerHTML = `
+                    <div class="baca-page-header">
+                        <div>
+                            <h1 class="baca-page-title">Administration</h1>
+                            <p class="baca-page-subtitle">
+                                Gestion des comptes utilisateurs et des rôles.
+                            </p>
+                        </div>
+
+                        <a class="nav-item">
+                      <a class="nav-link" href="sauvegarde.html">Sauvegarde</a>
+                       </a>
+
+
+
+
+                       
+
+
+                        <button
+                            id="newUserButton"
+                            class="btn btn-primary"
+                            type="button"
+                        >
+                            Nouvel utilisateur
+                        </button>
+                    </div>
+
+                    <div id="administrationMessage"></div>
+
+                    <section class="baca-card mb-4">
+                        <div class="baca-card-body">
+                            <div class="row g-3">
+                                <div class="col-12 col-lg-4">
+                                    <label for="userSearch" class="form-label">
+                                        Recherche
+                                    </label>
+                                    <input
+                                        id="userSearch"
+                                        type="search"
+                                        class="form-control"
+                                        placeholder="Nom, matricule, grade..."
+                                    >
+                                </div>
+
+                                <div class="col-12 col-md-6 col-lg-2">
+                                    <label for="userRole" class="form-label">
+                                        Rôle
+                                    </label>
+                                    <select id="userRole" class="form-select">
+                                        <option value="">Tous</option>
+                                        <option value="utilisateur">Utilisateur</option>
+                                        <option value="administrateur">Administrateur</option>
+                                        <option value="super_utilisateur">Super-utilisateur</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-12 col-md-6 col-lg-2">
+                                    <label for="userActif" class="form-label">
+                                        État
+                                    </label>
+                                    <select id="userActif" class="form-select">
+                                        <option value="">Tous</option>
+                                        <option value="true">Actif</option>
+                                        <option value="false">Désactivé</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-12">
+                                    <button
+                                        id="resetUserFilters"
+                                        class="btn btn-outline-secondary"
+                                        type="button"
+                                    >
+                                        Réinitialiser les filtres
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="baca-card">
+                        <div class="baca-card-header d-flex
+                            justify-content-between
+                            align-items-center
+                            gap-2
+                            flex-wrap"
+                        >
+                            <h2 class="h5 mb-0">Utilisateurs</h2>
+                            <span
+                                id="userResultCount"
+                                class="badge text-bg-secondary"
+                            >
+                                0 résultat
+                            </span>
+                        </div>
+
+                        <div class="baca-card-body">
+                            <div class="table-responsive">
+                                <table class="table align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>Matricule</th>
+                                            <th>Nom</th>
+                                            <th>Grade</th>
+                                            <th>Rôle</th>
+                                            <th>Email</th>
+                                            <th>État</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+
+                                    <tbody id="usersTableBody">
+                                        <tr>
+                                            <td colspan="7" class="text-center text-muted">
+                                                Chargement...
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <nav class="mt-3" aria-label="Pagination utilisateurs">
+                                <ul
+                                    id="usersPagination"
+                                    class="pagination justify-content-center mb-0"
+                                ></ul>
+                            </nav>
+                        </div>
+                    </section>
+
+
+
+
+
+
+
+
+
+
+
+<!-- Modal création / modification utilisateur -->
+<div
+    class="modal fade"
+    id="userModal"
+    tabindex="-1"
+    aria-labelledby="userModalLabel"
+    aria-describedby="userModalMessage"
+    aria-hidden="true"
+>
+    <div
+        class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg"
+    >
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5
+                    class="modal-title"
+                    id="userModalLabel"
+                >
+                    Utilisateur
+                </h5>
+
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Fermer"
+                ></button>
+            </div>
+
+            <div class="modal-body">
+                <div
+                    id="userModalMessage"
+                    role="status"
+                    aria-live="polite"
+                    class="mb-3"
+                ></div>
+
+                <form
+                    id="userForm"
+                    class="row g-3"
+                >
+                    <input
+                        type="hidden"
+                        id="userId"
+                    >
+
+                    <div class="col-12 col-md-6">
+                        <label
+                            for="userMatricule"
+                            class="form-label"
+                        >
+                            Matricule
+                        </label>
+
+                        <input
+                            id="userMatricule"
+                            type="text"
+                            class="form-control"
+                            autocomplete="off"
+                            required
+                        >
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <label
+                            for="userNomPrenom"
+                            class="form-label"
+                        >
+                            Nom et prénoms
+                        </label>
+
+                        <input
+                            id="userNomPrenom"
+                            type="text"
+                            class="form-control"
+                            autocomplete="name"
+                            required
+                        >
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <label
+                            for="userGrade"
+                            class="form-label"
+                        >
+                            Grade
+                        </label>
+
+                        <input
+                            id="userGrade"
+                            type="text"
+                            class="form-control"
+                            autocomplete="organization-title"
+                            required
+                        >
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <label
+                            for="userEmail"
+                            class="form-label"
+                        >
+                            Email
+                        </label>
+
+                        <input
+                            id="userEmail"
+                            type="email"
+                            class="form-control"
+                            autocomplete="email"
+                            required
+                        >
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <label
+                            for="userPassword"
+                            class="form-label"
+                        >
+                            Mot de passe initial
+                        </label>
+
+                        <input
+                            id="userPassword"
+                            type="password"
+                            class="form-control"
+                            minlength="8"
+                            autocomplete="new-password"
+                            required
+                        >
+
+                        <div class="form-text">
+                            Minimum recommandé : 8 caractères.
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <label
+                            for="userRoleSelect"
+                            class="form-label"
+                        >
+                            Rôle
+                        </label>
+
+                        <select
+                            id="userRoleSelect"
+                            class="form-select"
+                            required
+                        >
+                            <option value="utilisateur">
+                                Utilisateur
+                            </option>
+
+                            <option value="administrateur">
+                                Administrateur
+                            </option>
+
+                            <option value="super_utilisateur">
+                                Super-utilisateur
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <label
+                            for="userActifSelect"
+                            class="form-label"
+                        >
+                            État
+                        </label>
+
+                        <select
+                            id="userActifSelect"
+                            class="form-select"
+                            required
+                        >
+                            <option value="true">
+                                Actif
+                            </option>
+
+                            <option value="false">
+                                Désactivé
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="col-12">
+                        <div class="form-check">
+                            <input
+                                class="form-check-input"
+                                type="checkbox"
+                                id="userChangePassword"
+                            >
+
+                            <label
+                                class="form-check-label"
+                                for="userChangePassword"
+                            >
+                                Changer le mot de passe actuel
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <div
+                            id="userMessage"
+                            role="alert"
+                            aria-live="assertive"
+                        ></div>
+                    </div>
+
+                    <div class="col-12 d-flex flex-wrap gap-2">
+                        <button
+                            id="saveUserButton"
+                            type="submit"
+                            class="btn btn-primary"
+                        >
+                            Créer l’utilisateur
+                        </button>
+
+                        <button
+                            id="resetUserButton"
+                            type="button"
+                            class="btn btn-secondary"
+                        >
+                            Réinitialiser
+                        </button>
+
+                        <button
+                            type="button"
+                            class="btn btn-outline-secondary"
+                            data-bs-dismiss="modal"
+                        >
+                            Fermer
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="modal-footer">
+                <small class="text-muted me-auto">
+                    Les champs marqués comme obligatoires doivent être remplis.
+                </small>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
+
+
+                                
+                                <div class="modal-footer">
+                                    <button
+                                        type="button"
+                                        class="btn btn-secondary"
+                                        data-bs-dismiss="modal"
+                                    >
+                                        Annuler
+                                    </button>
+                                    <button
+                                        id="saveUserButton"
+                                        type="button"
+                                        class="btn btn-primary"
+                                    >
+                                        Enregistrer
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                window.BACA_ADMINISTRATION.initialize(profile);
+            }
+        );
+    </script>
+    <script src="assets/js/jsonbin-config.js"></script>
+    <script src="assets/js/jsonbin-client.js"></script>
+    <script src="assets/js/pwa.js"></script>
+    <script src="assets/js/offline-db.js"></script>
+</body>
+
+</html>

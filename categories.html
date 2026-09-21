@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>BACA-APP — Catégories</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <link rel="stylesheet" href="assets/css/style-baca.css">
+    <link rel="manifest" href="/manifest.json">
+</head>
+
+<body>
+
+    <div id="bacaLayout"></div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script src="assets/js/config.js"></script>
+    <script src="assets/js/supabase-client.js"></script>
+    <script src="assets/js/session.js"></script>
+    <script src="assets/js/layout.js"></script>
+    <script src="assets/js/categories.js"></script>
+
+    <script>
+        document.addEventListener(
+            "DOMContentLoaded",
+            async function () {
+                const profile =
+                    await window.BACA_SESSION.requireSession();
+
+                if (!profile) {
+                    return;
+                }
+
+                window.BACA_LAYOUT.render(profile);
+
+                document.querySelector("#pageContent").innerHTML = `
+                    <div class="baca-page-header">
+                        <div>
+                            <h1 class="baca-page-title">
+                                Catégories
+                            </h1>
+
+                            <p class="baca-page-subtitle">
+                                Référentiel des catégories et sous-catégories.
+                            </p>
+                        </div>
+
+                        <button
+                            id="addCategoryButton"
+                            class="btn btn-primary"
+                            type="button"
+                        >
+                            Nouvelle catégorie
+                        </button>
+                    </div>
+
+                    <div id="categoryMessage"></div>
+
+                    <section class="baca-card">
+                        <div class="baca-card-body">
+                            <div class="row g-3 mb-3">
+                                <div class="col-12 col-md-6">
+                                    <label
+                                        for="categorySearch"
+                                        class="form-label"
+                                    >
+                                        Rechercher
+                                    </label>
+
+                                    <input
+                                        type="search"
+                                        id="categorySearch"
+                                        class="form-control"
+                                        placeholder="Catégorie, sous-catégorie ou clé..."
+                                    >
+                                </div>
+
+                                <div class="col-12 col-md-6">
+                                    <label
+                                        for="categoryStatusFilter"
+                                        class="form-label"
+                                    >
+                                        État
+                                    </label>
+
+                                    <select
+                                        id="categoryStatusFilter"
+                                        class="form-select"
+                                    >
+                                        <option value="actives">
+                                            Catégories actives
+                                        </option>
+
+                                        <option value="toutes">
+                                            Toutes les catégories
+                                        </option>
+
+                                        <option value="inactives">
+                                            Catégories désactivées
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>Catégorie</th>
+                                            <th>Sous-catégorie</th>
+                                            <th>Suivi individuel</th>
+                                            <th>Clé technique</th>
+                                            <th>Seuil par défaut</th>
+                                            <th>État</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+
+                                    <tbody id="categoriesTableBody">
+                                        <tr>
+                                            <td
+                                                colspan="7"
+                                                class="text-center text-muted"
+                                            >
+                                                Chargement...
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </section>
+
+                 <div
+    class="modal fade"
+    id="categoryModal"
+    tabindex="-1"
+    aria-labelledby="categoryModalTitle"
+    aria-hidden="true"
+>
+    <div
+        class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg"
+    >
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h2
+                    id="categoryModalTitle"
+                    class="modal-title fs-5"
+                >
+                    Nouvelle catégorie
+                </h2>
+
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Fermer"
+                ></button>
+            </div>
+
+            <form id="categoryForm">
+
+                <div class="modal-body">
+                    <input
+                        type="hidden"
+                        id="categoryId"
+                    >
+
+                    <div class="row g-3">
+
+                        <div class="col-12 col-md-6">
+                            <label
+                                for="categoryName"
+                                class="form-label"
+                            >
+                                Catégorie
+                            </label>
+
+                            <input
+                                type="text"
+                                id="categoryName"
+                                class="form-control"
+                                autocomplete="off"
+                                required
+                            >
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label
+                                for="subcategoryName"
+                                class="form-label"
+                            >
+                                Sous-catégorie
+                            </label>
+
+                            <input
+                                type="text"
+                                id="subcategoryName"
+                                class="form-control"
+                                autocomplete="off"
+                                required
+                            >
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label
+                                for="technicalKey"
+                                class="form-label"
+                            >
+                                Clé technique
+                            </label>
+
+                            <input
+                                type="text"
+                                id="technicalKey"
+                                class="form-control"
+                                placeholder="DRN-AERONEF"
+                                pattern="[A-Za-z0-9-]+"
+                                autocomplete="off"
+                                required
+                            >
+
+                            <div class="form-text">
+                                Utiliser des lettres,
+                                chiffres et tirets.
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label
+                                for="defaultThreshold"
+                                class="form-label"
+                            >
+                                Seuil d’alerte par défaut
+                            </label>
+
+                            <input
+                                type="number"
+                                id="defaultThreshold"
+                                class="form-control"
+                                min="0"
+                                step="0.001"
+                                value="0"
+                                required
+                            >
+                        </div>
+
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input
+                                    type="checkbox"
+                                    id="individualTracking"
+                                    class="form-check-input"
+                                >
+
+                                <label
+                                    for="individualTracking"
+                                    class="form-check-label"
+                                >
+                                    Suivi individuel
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input
+                                    type="checkbox"
+                                    id="categoryActive"
+                                    class="form-check-input"
+                                    checked
+                                >
+
+                                <label
+                                    for="categoryActive"
+                                    class="form-check-label"
+                                >
+                                    Catégorie active
+                                </label>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button
+                        type="button"
+                        class="btn btn-secondary"
+                        data-bs-dismiss="modal"
+                    >
+                        Annuler
+                    </button>
+
+                    <button
+                        type="submit"
+                        id="saveCategoryButton"
+                        class="btn btn-primary"
+                    >
+                        Enregistrer
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+                `;
+
+                window.BACA_CATEGORIES.initialize(profile);
+            }
+        );
+    </script>
+    <script src="assets/js/pwa.js"></script>
+    <script src="assets/js/offline-db.js"></script>
+</body>
+
+</html>
